@@ -6,7 +6,7 @@ FastAPI does have the ability out of the box for background tasks, check out the
 
 So what exactly is RabbitMQ and Dramatiq?  RabbitMQ is a message broker; a way for applications, systems, services to communicate with one another and exchange information.  Dramatiq is a python based background task processing library.  Dramatiq has the concept of actors and workers.  When you want to run a function in the background you use a decorator `@dramatiq.actor`.  To call that function and to have it run in the background you append `send()` to the end of it.  The `send()` enqueues the message on RabbitMQ.  A Dramatiq **worker** will receive the message and pass it along the appropriate **actor**.  When you enqueue messages, if you pass along data to the actor, it must be in JSON format.
 
-In this demo I have a basic FastAPI app deployed that has a single endpoint, `/tasks`.  When you make a `POST` to the `/tasks` endpoint the variable `seconds` should be passed in the body.  Here is a high level diagram of the demo environment and what's happening behind the scenes when you perform a `POST` to the `/tasks` endpoint:
+In this demo I have a basic FastAPI app deployed that has a single endpoint, `/tasks`.  When you make a `POST` to the `/tasks` endpoint the variable `seconds` should be passed in the body.  The client will get an immediate response and a countdown will be performed in the background.  Here is a high level diagram of the demo environment and what's happening behind the scenes when you perform a `POST` to the `/tasks` endpoint:
 
 ![Demo](docs/demo.png)
 
@@ -77,4 +77,40 @@ Open up your browser and navigate to `http://localhost:5050` and you should see 
 ```
 
 ### How Does this all Work?
+
+There are two big things that are happening here that we'll dig into.  First when you send a `POST` to the `/tasks` endpoint we use Dramatiq to enqueue the message onto RabbitMQ.  We then immediately response back to the client while a Dramatiq worker pops the message from the queue and sends it onto the corresponding actor.  
+
+**Enqueing Messages**
+
+When you send a `POST` to the `/tasks` endpoint it will immediately enqueue a message to RabbitMQ to be picked up by a worker.  Let's take a look at where exactly this occurs.  If you look at the [/app/api/tasks.py](https://github.com/briantsaunders/rabbitmq-dramatiq-demo/blob/main/app/api/tasks.py) file you'll see the following:
+
+```python
+from fastapi import APIRouter
+
+from app import schemas
+from app import actors
+
+
+router = APIRouter()
+
+
+@router.post("", response_model=schemas.Task)
+def create_task(task_in: schemas.TaskCreate):
+    actors.run_task.send(task_in.seconds)
+    return {"seconds": task_in.seconds, "status": "submitted"}
+```
+
+By appending `send(task_in.seconds)` to `actors.run_task` is what enqueues the message to be picked up by a worker and causes it to be ran in the background.  If you were to remove the `send(task_in.seconds)` and had that line look like `actors.run_task(task_in.seconds)` it would not run that function in the background and the client would not get a response back until the countdown completed.
+
+**Dramatiq Workers**
+
+When you first ran the [entrypoint.sh](https://github.com/briantsaunders/rabbitmq-dramatiq-demo/blob/main/entrypoint.sh) script it did two things:
+
+  1. Ran FastAPI via the [entrypoint_api.sh](https://github.com/briantsaunders/rabbitmq-dramatiq-demo/blob/main/entrypoint_api.sh) script.
+
+  2. Spin up Dramatiq workers via the [entrypoint_dramatiq.sh](https://github.com/briantsaunders/rabbitmq-dramatiq-demo/blob/main/entrypoint_dramatiq.sh) script.
+
+Take a closer look at the `entrypoint_dramatiq.sh` script, when you install Dramatiq it comes with a command line utility called `dramatiq`.  In that `entrypoint_dramatiq.sh` script we're using that command line utility and referencing our `actors/` directory.  This will spin up workers for all functions that have the `@dramatiq.actor` decorator that are registered in the `actors/__init__.py` file.
+
+
 
