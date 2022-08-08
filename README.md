@@ -112,6 +112,32 @@ When you first ran the [entrypoint.sh](https://github.com/briantsaunders/rabbitm
 
 Take a closer look at the `entrypoint_dramatiq.sh` script, when you install Dramatiq it comes with a command line utility called `dramatiq`.  In that `entrypoint_dramatiq.sh` script we're using that command line utility and referencing our `actors/` directory.  This will spin up workers for all functions that have the `@dramatiq.actor` decorator that are registered in the `actors/__init__.py` file.
 
+```python
+import dramatiq
+from dramatiq.brokers.rabbitmq import RabbitmqBroker
+
+from config import get_app_settings
+
+SETTINGS = get_app_settings()
+
+
+def get_url():
+    return (
+        f"amqp://{SETTINGS.RABBITMQ_USER}:"
+        f"{SETTINGS.RABBITMQ_PASSWORD}"
+        f"@{SETTINGS.RABBITMQ_HOST}/{SETTINGS.RABBITMQ_VHOST}"
+    )
+
+
+rabbitmq_broker = RabbitmqBroker(url=get_url())
+dramatiq.set_broker(rabbitmq_broker)
+
+from app.actors.task import run_task  # noqa: E402
+
+__all__ = ("run_task",)
+
+```
+
 **Dramatiq Actors**
 
 Actors are what receive the messages from the workers.  If you look at the [/app/actors/task.py](https://github.com/briantsaunders/fastapi-rabbitmq-dramatiq-demo/blob/main/app/actors/task.py) file you'll see the `@dramatiq.actor` decorator over the `run_task` function.  That decorator designates that function as an actor.
