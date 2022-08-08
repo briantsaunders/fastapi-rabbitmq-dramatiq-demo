@@ -1,0 +1,6 @@
+-r requirements.txt
+black
+dramatiq[rabbitmq, watch]
+flake8
+pytest
+pytest-cov

@@ -1,0 +1,5 @@
+dramatiq[rabbitmq]
+fastapi
+loguru
+python-dotenv
+uvicorn[standard]

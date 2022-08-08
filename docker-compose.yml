@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  api:
+    container_name: demo_api
+    build: 
+      context: .
+      dockerfile: .devcontainer/Dockerfile
+    user: vscode
+    restart: always
+    # Overrides default command so things don't shut down after the process ends.
+    command: /bin/sh -c "while sleep 1000; do :; done"
+    volumes:
+      - .:/workspace:cached
+    ports:
+      - 5050:5000
+    depends_on:
+      - rabbitmq
+  rabbitmq:
+    container_name: demo_rabbitmq
+    image: rabbitmq:3.10.7
+    restart: always
+    environment:
+      RABBITMQ_DEFAULT_VHOST: demo
