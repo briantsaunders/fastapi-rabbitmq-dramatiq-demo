@@ -4,7 +4,7 @@
 
 FastAPI does have the ability out of the box for background tasks, check out the docs [here](https://fastapi.tiangolo.com/tutorial/background-tasks/).  You should only use the builtin option for simple / light tasks.  If you have a resource intensive task or want more features / options (retries, limits, scheduling, etc.) then the RabbitMQ/Dramatiq setup is the way to go.
 
-So what exactly is RabbitMQ and Dramatiq?  RabbitMQ is a message broker; a way for applications, systems, services to communicate with one another and exchange information.  Dramatiq is a python based background task processing library.  Dramatiq has the concept of actors and workers.  When you want to run a function in the background you use a decorator `@dramatiq.actor`.  To call that function and to have it run in the background you append `send()` to the end of it.  The `send()` enqueues the message on RabbitMQ.  A Dramatiq **worker** will receive the message and pass it along the appropriate **actor**.  When you enqueue messages, if you pass along data to the actor, it must be in JSON format.
+So what exactly is RabbitMQ and Dramatiq?  RabbitMQ is a message broker; a way for applications, systems, services to communicate with one another and exchange information.  Dramatiq is a python based background task processing library.  Dramatiq has the concept of actors and workers.  When you want to run a function in the background you use a decorator `@dramatiq.actor`.  To call that function and to have it run in the background you append `send()` to the end of it.  The `send()` enqueues the message on RabbitMQ.  A Dramatiq **worker** will receive the message and pass it along the appropriate **actor**.  When you enqueue messages, if you pass along data to the actor, it must be in JSON format.  This may seem like a lot, but don't worry, we'll break it all down shortly!
 
 In this demo I have a basic FastAPI app deployed that has a single endpoint, `/tasks`.  When you make a `POST` to the `/tasks` endpoint the variable `seconds` should be passed in the body.  The client will get an immediate response and a countdown will be performed in the background.  Here is a high level diagram of the demo environment and what's happening behind the scenes when you perform a `POST` to the `/tasks` endpoint:
 
@@ -32,11 +32,11 @@ With these tools installed on your workstation we'll be able to leverage docker 
 
 ### Bring Up Demo Environment
 
-Once you have the prerequisites met you should now be able to spin up the demo environment.  The first thing you need to do is **clone** down this repo.  Once you have cloned the repo then -> open vscode -> select open folder -> locate the directory you just cloned down -> select open.  
+Once you have the prerequisites met you should now be able to bring up the demo environment.  The first thing you need to do is **clone** down this repo.  Once you have cloned the repo then -> open vscode -> select open folder -> locate the directory you just cloned down -> select open.  
 
 VSCode should automatically recognize that the directory contains a `.devcontainer/` folder and you should see a prompt asking if you'd like to open in a container -> select yes.  If you do not see a prompt, do not worry, you can also open the project within a container by going to the bottom left hand corner of vscode -> click on the green opposite arrow icon -> this should pop open a a dropdown at the top -> select reopen in a container.
 
-After going about either of those methods VSCode should re-open and begin the process of bringing the containers up.  Once the containers are fully up open a new terminal within VSCode and it should drop you into the `api` container.
+After going about either of those methods VSCode should re-open and begin the process of bringing the containers up.  Once the containers are fully up open a new terminal within VSCode and it should drop you into the `api` container shell.
 
 ### Run The Demo
 
@@ -78,7 +78,7 @@ Open up your browser and navigate to `http://localhost:5050` and you should see 
 
 ### How Does this all Work?
 
-There are two big things that are happening here that we'll dig into.  First when you send a `POST` to the `/tasks` endpoint we use Dramatiq to enqueue the message onto RabbitMQ.  We then immediately response back to the client while a Dramatiq worker pops the message from the queue and sends it onto the corresponding actor.  
+There are two big things that are happening here that we'll dig into.  First when you send a `POST` to the `/tasks` endpoint we use Dramatiq to enqueue the message onto RabbitMQ.  We then immediately respond back to the client while a Dramatiq worker pops the message from the queue and sends it onto the corresponding actor.  
 
 **Enqueing Messages**
 
@@ -100,17 +100,36 @@ def create_task(task_in: schemas.TaskCreate):
     return {"seconds": task_in.seconds, "status": "submitted"}
 ```
 
-By appending `send(task_in.seconds)` to `actors.run_task` is what enqueues the message to be picked up by a worker and causes it to be ran in the background.  If you were to remove the `send(task_in.seconds)` and had that line look like `actors.run_task(task_in.seconds)` it would not run that function in the background and the client would not get a response back until the countdown completed.
+By appending `send(task_in.seconds)` to `actors.run_task` is what enqueues the message to be picked up by a worker and causes it to be ran in the background.  If you were to remove the `send(task_in.seconds)` and had that line look like `actors.run_task(task_in.seconds)` it would not run that function in the background and the client would not get a response back until the countdown completed.  Give it a try and see for yourself.
 
 **Dramatiq Workers**
 
 When you first ran the [entrypoint.sh](https://github.com/briantsaunders/rabbitmq-dramatiq-demo/blob/main/entrypoint.sh) script it did two things:
 
-  1. Ran FastAPI via the [entrypoint_api.sh](https://github.com/briantsaunders/rabbitmq-dramatiq-demo/blob/main/entrypoint_api.sh) script.
+  1. Ran the FastAPI app via the [entrypoint_api.sh](https://github.com/briantsaunders/rabbitmq-dramatiq-demo/blob/main/entrypoint_api.sh) script.
 
-  2. Spin up Dramatiq workers via the [entrypoint_dramatiq.sh](https://github.com/briantsaunders/rabbitmq-dramatiq-demo/blob/main/entrypoint_dramatiq.sh) script.
+  2. Spun up Dramatiq workers via the [entrypoint_dramatiq.sh](https://github.com/briantsaunders/rabbitmq-dramatiq-demo/blob/main/entrypoint_dramatiq.sh) script.
 
 Take a closer look at the `entrypoint_dramatiq.sh` script, when you install Dramatiq it comes with a command line utility called `dramatiq`.  In that `entrypoint_dramatiq.sh` script we're using that command line utility and referencing our `actors/` directory.  This will spin up workers for all functions that have the `@dramatiq.actor` decorator that are registered in the `actors/__init__.py` file.
 
+**Dramatiq Actors**
+
+Actors are what receive the messages from the workers.  If you look at the [/app/actors/task.py](https://github.com/briantsaunders/fastapi-rabbitmq-dramatiq-demo/blob/main/app/actors/task.py) file you'll see the `@dramatiq.actor` decorator over the `run_task` function.  That decorator designates that function as an actor.
+
+```python
+import time
+
+from loguru import logger
+
+from app.actors import dramatiq
 
 
+@dramatiq.actor
+def run_task(seconds: int):
+    logger.info("task recevied!")
+    for x in range(seconds, 0, -1):
+        logger.info(f"counting down until task complete - seconds: {x}")
+        time.sleep(1)
+    logger.info("task completed!")
+
+```
