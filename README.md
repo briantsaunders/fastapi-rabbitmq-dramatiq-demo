@@ -4,9 +4,9 @@
 
 FastAPI does have the ability out of the box for background tasks, check out the docs [here](https://fastapi.tiangolo.com/tutorial/background-tasks/).  You should only use the builtin option for simple / light tasks.  If you have a resource intensive task or want more features / options (retries, limits, scheduling, etc.) then the RabbitMQ/Dramatiq setup is the way to go.
 
-So what exactly is RabbitMQ and Dramatiq?  RabbitMQ is a message broker; a way for applications, systems, services to communicate with one another and exchange information.  Dramatiq is a python based background task processing library.  Dramatiq has the concept of actors and workers.  An actor enqueues a message on RabbitMQ and a worker receives the message and executes the task.
+So what exactly is RabbitMQ and Dramatiq?  RabbitMQ is a message broker; a way for applications, systems, services to communicate with one another and exchange information.  Dramatiq is a python based background task processing library.  Dramatiq has the concept of actors and workers.  When you want to run a function in the background you use a decorator `@dramatiq.actor`.  To call that function and to have it run in the background you append `send()` to the end of it.  The `send()` enqueues the message on RabbitMQ.  A Dramatiq **worker** will receive the message and pass it along the appropriate **actor**.  When you enqueue messages, if you pass along data to the actor, it must be in JSON format.
 
-Here is a high level diagram of the demo environment and what's happening behind the scenes when you call the `/tasks` endpoint:
+In this demo I have a basic FastAPI app deployed that has a single endpoint, `/tasks`.  When you make a `POST` to the `/tasks` endpoint the variable `seconds` should be passed in the body.  Here is a high level diagram of the demo environment and what's happening behind the scenes when you perform a `POST` to the `/tasks` endpoint:
 
 ![Demo](docs/demo.png)
 
@@ -30,7 +30,7 @@ With these tools installed on your workstation we'll be able to leverage docker 
 
 ## Demo Environment
 
-### Bring Up Demo
+### Bring Up Demo Environment
 
 Once you have the prerequisites met you should now be able to spin up the demo environment.  The first thing you need to do is **clone** down this repo.  Once you have cloned the repo then -> open vscode -> select open folder -> locate the directory you just cloned down -> select open.  
 

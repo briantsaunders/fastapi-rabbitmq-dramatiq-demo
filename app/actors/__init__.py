@@ -17,6 +17,6 @@ def get_url():
 rabbitmq_broker = RabbitmqBroker(url=get_url())
 dramatiq.set_broker(rabbitmq_broker)
 
-from app.workers.task import run_task  # noqa: E402
+from app.actors.task import run_task  # noqa: E402
 
 __all__ = ("run_task",)

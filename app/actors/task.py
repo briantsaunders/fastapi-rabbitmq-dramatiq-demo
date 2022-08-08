@@ -2,7 +2,7 @@ import time
 
 from loguru import logger
 
-from app.workers import dramatiq
+from app.actors import dramatiq
 
 
 @dramatiq.actor
