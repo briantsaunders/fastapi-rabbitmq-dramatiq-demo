@@ -2,7 +2,7 @@
 
 delay=1
 while true; do
-  dramatiq app.workers
+  dramatiq app.actors
   if [ $? -eq 3 ]; then
     echo "Connection error encountered on startup. Retrying in $delay second(s)..."
     sleep $delay

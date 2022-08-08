@@ -18,7 +18,9 @@ services:
       - rabbitmq
   rabbitmq:
     container_name: demo_rabbitmq
-    image: rabbitmq:3.10.7
+    image: rabbitmq:3.10.7-management
     restart: always
+    ports:
+      - 15672:15672
     environment:
       RABBITMQ_DEFAULT_VHOST: demo
