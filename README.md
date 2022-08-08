@@ -58,7 +58,7 @@ vscode ➜ /workspace (main ✗) $ ./entrypoint.sh
 2022-08-08 18:54:34,877 | INFO:    | uvicorn.error - Application startup complete.
 ```
 
-Open up your browser and navigate to `http://localhost:5050` and you should see the demo api's OpenAPI docs.  Expan the `/tasks` endpoint -> select Try it out -> edit the seconds var if you'd like (default is 10) -> hit execute.  You'll notice from the OpenAPI docs you get an immediate response back but from the terminal you can see the background task running.  Pretty cool!
+Open up your browser and navigate to `http://localhost:5050` and you should see the demo api's OpenAPI docs.  Expand the `/tasks` endpoint -> select Try it out -> edit the seconds var if you'd like (default is 10) -> hit execute.  You'll notice from the OpenAPI docs you get an immediate response back but from the terminal you can see the background task running.  Pretty cool!
 
 ```shell
 2022-08-08 18:58:33,702 | INFO:    | uvicorn.access - 192.168.32.1:54054 - "POST /tasks HTTP/1.1" 200 OK
