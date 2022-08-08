@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from pydantic import BaseModel, Field
 
 
@@ -14,5 +16,6 @@ class TaskCreate(BaseModel):
 
 
 class Task(BaseModel):
+    message_id: UUID
     seconds: int
     status: str
