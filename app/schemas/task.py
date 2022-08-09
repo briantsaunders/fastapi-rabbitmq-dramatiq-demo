@@ -8,7 +8,7 @@ BASE_SCHEMA_EXTRA = {"example": {"seconds": 10}}
 
 class TaskCreate(BaseModel):
     seconds: int = Field(
-        title="Duration in seconds the task should run for.", ge=1, le=60
+        title="Duration in seconds the task should run for.", ge=1, le=300
     )
 
     class Config:

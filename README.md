@@ -96,8 +96,13 @@ router = APIRouter()
 
 @router.post("", response_model=schemas.Task)
 def create_task(task_in: schemas.TaskCreate):
-    actors.run_task.send(task_in.seconds)
-    return {"seconds": task_in.seconds, "status": "submitted"}
+    task = actors.run_task.send(task_in.seconds)
+    return {
+        "message_id": task.message_id,
+        "seconds": task_in.seconds,
+        "status": "submitted",
+    }
+
 ```
 
 By appending `send(task_in.seconds)` to `actors.run_task` is what enqueues the message to be picked up by a worker and causes it to be ran in the background.  If you were to remove the `send(task_in.seconds)` and had that line look like `actors.run_task(task_in.seconds)` it would not run that function in the background and the client would not get a response back until the countdown completed.  Give it a try and see for yourself.
