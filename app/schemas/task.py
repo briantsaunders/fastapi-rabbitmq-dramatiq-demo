@@ -1,3 +1,4 @@
+from typing import Union
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -16,6 +17,6 @@ class TaskCreate(BaseModel):
 
 
 class Task(BaseModel):
-    message_id: UUID
+    message_id: Union[UUID, None] = None
     seconds: int
     status: str
